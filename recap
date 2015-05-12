@@ -36,4 +36,6 @@ Lists
 147> NewList = [1|List].
 [1,1,2,3]
 
+length([1]).
+
 

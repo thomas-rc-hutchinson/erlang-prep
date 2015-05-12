@@ -1,0 +1,39 @@
+Boolean
+
+100> 1 == 1.0.
+true
+101> 1 =:= 1.0.
+false
+
+102> 1 /= 1.0.
+false
+103> 1 =/= 1.0.
+true
+
+Erlang operator compares int with floats where as regular one compares number with number
+
+
+Tuples
+
+110> X = 10, Y = 4.
+4
+111> Points = {X,Y}.
+{10,4}
+112> {X,Y} = Points.
+{10,4}
+113> X.
+10
+
+Lists
+
+143> hd([1,2,3]).
+1
+144> tl([1,2,3]).
+[2,3]
+
+146> List = [1,2,3].
+[1,2,3]
+147> NewList = [1|List].
+[1,1,2,3]
+
+

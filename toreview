@@ -1,10 +1,17 @@
 Ops
 Process stacktrace, constructing PID and reading stacktrace
 Connect to process and view state etc
+VM, bytecode
 
 Dev
+List recursion
 Binary streams
+	- Binary syntax
 Erlang datatypes
+Process monitoring
+Lambdas
+Code swap
 
 
 Erlang Programming O'reilly 
+Erlang Solutions as a company

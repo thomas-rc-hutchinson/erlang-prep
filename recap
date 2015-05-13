@@ -38,4 +38,25 @@ Lists
 
 length([1]).
 
+63> erlang:element(2,{a,b,c}).
+b
 
+65> lists:seq(1,4).
+[1,2,3,4]
+
+
+Macros
+ -define(MACRO, some_value). and is used as ?MACRO inside any function 
+ -define(sub(X,Y), X-Y). and used like ?sub(23,47), later replaced by 23-47 by the compiler 
+
+Modules
+- module_info/0, module_info/1
+
+Trivia
+- .erl files compiled down to .beam (Bogdan/Björn's Erlang Abstract Machine)files
+- c/1 is used to compile, cd/1 to change dir
+- Can be compiled to native code
+- vsn is an automatically generated unique value differentiating each version of your code. It is used in code hot-loading (upgrading an application while it runs, without stopping it) and by some tools related to release handling.
+- Open Telecom Platform is the open source distribution of Erlang and an application server written in Erlang
+- Guard clause ; acts like orelse and evaluates one. , just evaluates first.
+- is_integer, is_list etc are built in functions

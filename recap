@@ -60,3 +60,4 @@ Trivia
 - Open Telecom Platform is the open source distribution of Erlang and an application server written in Erlang
 - Guard clause ; acts like orelse and evaluates one. , just evaluates first.
 - is_integer, is_list etc are built in functions
+- Version 17.5[1] / April 1, 2015; 

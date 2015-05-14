@@ -2,14 +2,21 @@
 -export([add/2, greet_and_add_two/1, hello/0, 
 	seq/0, macro/0, funMac/2, info/0,push/2,contains/2, pop/1, animals/0,
 	dogs/1, even/0, colour/0, pixels/1, 
-	testbit/0, old_enough/1, if_test/0, sound/1, insert/2]).
+	testbit/0, old_enough/1, if_test/0, sound/1, insert/2,fib/1, 
+	testadd/0, johndoe/0]).
 -import(io, [format/1]).
 -import(lists, [seq/2]).
 -define(MACRO, 36).
 -define(FUNMACRO(X,Y), X-Y).
 
--author("TRCH").
+-record(human, {name, age, powers=[fly]}).
 
+-author("TRCH").
+-include("client.hrl").
+
+
+
+johndoe() -> #human{name="jondoe", age=37}.
 
 add(X,Y) -> X + Y.
 
@@ -79,3 +86,17 @@ insert(X,Set) ->
 		false -> [X|Set]
 	end.
 %case end 
+
+
+%fib 
+fib(1) -> 1;
+fib(2) -> 2;
+fib(N) -> fib(N-2) + fib(N-1).
+
+
+%high order functions
+one() -> 1.
+two() -> 2.
+ 
+addition(X,Y) -> X() + Y().
+testadd() -> addition(fun one/0, fun two/0).

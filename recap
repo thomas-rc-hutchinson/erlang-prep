@@ -61,3 +61,7 @@ Trivia
 - Guard clause ; acts like orelse and evaluates one. , just evaluates first.
 - is_integer, is_list etc are built in functions
 - Version 17.5[1] / April 1, 2015; 
+- When it didn't work, an error was thrown in your face, but only once you ran the code. This is because Erlang is dynamically typed: every error is caught at runtime and the compiler won't always yell at you when compiling modules where things may result in failure, like in Starting Out (for real)'s "llama + 5" example.
+- The best example is the often reported nine nines (99.9999999%) of availability offered on the Ericsson AXD 301 ATM switches, 
+- Erlang is also strongly typed e.g. 6 + "1" fails.
+- Erlang header files are pretty similar to their C counter-part: they're nothing but a snippet of code that gets added to the module as if it were written there in the first place. Create a file named records.hrl with the following content

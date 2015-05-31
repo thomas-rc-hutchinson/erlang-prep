@@ -1,102 +1,56 @@
 -module(client).
--export([add/2, greet_and_add_two/1, hello/0, 
-	seq/0, macro/0, funMac/2, info/0,push/2,contains/2, pop/1, animals/0,
-	dogs/1, even/0, colour/0, pixels/1, 
-	testbit/0, old_enough/1, if_test/0, sound/1, insert/2,fib/1, 
-	testadd/0, johndoe/0]).
--import(io, [format/1]).
+-export([perms/1, task/3, nth_root/2, floor/1]).
+-import(io, [format/1, format/2]).
 -import(lists, [seq/2]).
--define(MACRO, 36).
--define(FUNMACRO(X,Y), X-Y).
-
--record(human, {name, age, powers=[fly]}).
-
--author("TRCH").
--include("client.hrl").
 
 
-
-johndoe() -> #human{name="jondoe", age=37}.
-
-add(X,Y) -> X + Y.
-
-% hello world
-%% two is more of a style
-hello() -> format("Hello, world!~n").
-seq() -> seq(1,10).
-macro() -> ?MACRO.
-funMac(X,Y) -> ?FUNMACRO(X,Y).
-info() -> ?MODULE:module_info().
-greet_and_add_two(X) -> hello(), add(X,2).
+task(End, End, Acc) -> Acc;
+task(Pos, End, Acc) -> task(Pos+1, End, [perms(Pos)|Acc]).
 
 
-%%stack start
-push(E, []) -> [E];
-push(E, List) -> [E|List].
-
-pop([]) -> [];
-pop([H|T]) -> T.
-
-contains(E, [E|T]) -> true;
-contains(E, []) -> false;
-contains(E, [H|T]) -> contains(E, T).
-%%stack end
-
-%%list comprehension start
-animals() -> [{dog, "Pip"}, {dog, "Bandit"}, {cat, "Cleo"}].
-
-dogs(Animals) -> [Name || {dog, Name} <- Animals].
-even() -> [Value+1 || Value <- [1,2,3,4,5], Value rem 2 =:= 0].
-%%list comprehension end
-
-%%bit syntax start 
-colour() -> 16#F09A29.
-pixels(Color) -> <<Color:24>>.
-rgb(<<R:8, G:8, B:8>>) -> {R,G,B}.
-
-testbit() -> rgb(pixels(colour())).
-
-bincom() -> [ X || <<X>> <= <<1,2,3,4,5>>, X rem 2 == 0]. 
-%%bit syntax end
-
-%guards start 
-old_enough(X) when X >= 18; X =< 104 -> true;
-old_enough(_) -> false.
-%guards end
-
-%if start   
-if_test() -> 
-	if 1 =:= 1 -> 
-		one
-	end.
-
-sound(Animal) ->
-	Talk = if Animal == dog -> "woof";
-			  Animal == cat -> "meow"
-		   end,
-	{Animal, Talk}.
-%if end 
+valid(V) -> float_to_list(V).
 
 
-%case start 
-insert(X,[]) -> [X];
-insert(X,Set) ->
-	case lists:member(X,Set) of
-		true  -> Set;
-		false -> [X|Set]
-	end.
-%case end 
+floor(X) when X < 0 ->
+    T = trunc(X),
+    case X - T == 0 of
+        true -> T;
+        false -> T - 1
+    end;
+floor(X) -> 
+    trunc(X).
 
 
-%fib 
-fib(1) -> 1;
-fib(2) -> 2;
-fib(N) -> fib(N-2) + fib(N-1).
+perms(V) when is_integer(V) -> [list_to_integer(L) || L <- perms(integer_to_list(V))];
+perms([]) -> [[]];
+perms(L)  -> [[H|T] || H <- L, T <- perms(L--[H])].
 
 
-%high order functions
-one() -> 1.
-two() -> 2.
- 
-addition(X,Y) -> X() + Y().
-testadd() -> addition(fun one/0, fun two/0).
+nth_root(N, X) -> nth_root(N, X, 1.0e-5).
+nth_root(N, X, Precision) ->
+    F = fun(Prev) -> ((N - 1) * Prev + X / math:pow(Prev, (N-1))) / N end,
+    fixed_point(F, X, Precision).
+
+fixed_point(F, Guess, Tolerance) ->
+    fixed_point(F, Guess, Tolerance, F(Guess)).
+fixed_point(_, Guess, Tolerance, Next) when abs(Guess - Next) < Tolerance ->
+    Next;
+fixed_point(F, _, Tolerance, Next) ->
+    fixed_point(F, Next, Tolerance, F(Next)).
+
+
+
+% [1,2,3]-[2,3]-[3]
+
+
+
+
+
+
+
+
+
+
+
+
+

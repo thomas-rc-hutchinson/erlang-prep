@@ -1,6 +1,6 @@
 -module(client).
 -export([perms/1, nth_root/2, floor/1, t/0, 
-    is_whole/1, t/1, task/2, d/1, ld/1, s/1]).
+    is_whole/1, t/1, task/2, d/1, ld/1, s/1, ar/3, arit/2]).
 -import(io, [format/1, format/2]).
 -import(lists, [seq/2]).
 
@@ -17,6 +17,14 @@ d(N) -> io:format("~B~n", [N]).
 
 
 % {100025,[{512,8.0},{125000,50.0},{512000,80.0}]}
+
+
+ar(Finish, Finish, Array) -> d(array:size(Array)), arit(Array, 1);
+ar(C, Finish, Array) -> ar(C+1, Finish, array:set(C, false, Array)).
+
+arit(Array, 41063625) -> ok;
+arit(Array, Counter) -> array:get(Counter, Array), arit(Array, Counter+1).
+
 
 task(End, End) -> exit(1);
 task(Counter, End) ->

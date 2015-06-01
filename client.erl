@@ -1,50 +1,49 @@
 -module(client).
--export([perms/1, nth_root/2, floor/1, t/0, 
-    is_whole/1, t/1, task/2, d/1, ld/1, s/1, ar/3, arit/2]).
+-export([permutations/1, nth_root/2, floor/1, 
+    no_decimal_places/1, task/4, print/1, printList/1, number_size/1, ar/3, arit/2, start_task/4,
+    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1]).
 -import(io, [format/1, format/2]).
 -import(lists, [seq/2]).
 
 
-
-
-
-t() -> [{X, nth_root(3,X)} || X <- remove_dups(perms(41063625)), is_whole(nth_root(3, X)) ].
-t(N) -> [{X, nth_root(3,X)} || X <- remove_dups(perms(N)), is_whole(nth_root(3, X))].
-
-
-ld(N) -> [d(X) || X <- N].
-d(N) -> io:format("~B~n", [N]).
-
-
+%41063625
+% 41063621 410636256
 % {100025,[{512,8.0},{125000,50.0},{512000,80.0}]}
 
+%client:cubes_from_permutations(41063625).
+cubes_from_permutations(Number) -> 
+    [{PermNum,  nth_root(3,PermNum)} || PermNum <- permutations(Number), no_decimal_places(nth_root(3,PermNum))].
 
-ar(Finish, Finish, Array) -> d(array:size(Array)), arit(Array, 1);
-ar(C, Finish, Array) -> ar(C+1, Finish, array:set(C, false, Array)).
+permutations(Number) when is_integer(Number) -> 
+    NumberSize = number_size(Number),
+    [list_to_integer(Perm) || Perm <- remove_dups(permutations(integer_to_list(Number))), number_size(list_to_integer(Perm)) == NumberSize];
 
-arit(Array, 41063625) -> ok;
-arit(Array, Counter) -> array:get(Counter, Array), arit(Array, Counter+1).
+permutations([]) -> [[]];
+permutations(L)  -> [[H|T] || H <- L, T <- permutations(L--[H])].
 
 
-task(End, End) -> exit(1);
-task(Counter, End) ->
-    d(Counter),
-    Cubes = t(Counter),
+task(End, End, Id, ParentPid) -> print(Id), ParentPid ! {Id, false};   
+task(Counter, End, Id, ParentPid) ->
+    Cubes = cubes_from_permutations(Counter),
     case length(Cubes) == 3 of 
-        true -> {Counter, Cubes};
-        false -> task(Counter + 1, End)
+        true -> print(Id), ParentPid ! {Id, true, Counter, Cubes};
+        false -> task(Counter + 1, End, Id, ParentPid)
     end.
 
+%client:start_task(41063625, 41063626, 1, self())
+start_task(Start, Finish, Id, ParentPid) -> spawn(?MODULE, task, [Start, Finish, Id, ParentPid]).
+
+%client:start_multiple_task(41063603,10,1,41063626,self(),[]).
+start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) when Counter >= Limit -> print(Id), TaskPids;
+start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) 
+    -> print(Id), start_multiple_task(Counter+Amount, Amount, Id+1, Limit, ParentPid, 
+        [start_task(Counter, Counter+Amount, Id, ParentPid)|TaskPids]).
 
 
-s(I) when is_integer(I) -> length(integer_to_list(I)). 
-
-
-is_whole(N) -> N == floor(N).
+%utils
+number_size(I) when is_integer(I) -> length(integer_to_list(I)). 
+no_decimal_places(N) -> N == floor(N).
 remove_dups(L) -> sets:to_list(sets:from_list(L)).
-
-
-
 
 floor(X) when X < 0 ->
     T = trunc(X),
@@ -55,17 +54,6 @@ floor(X) when X < 0 ->
 floor(X) -> 
     trunc(X).
 
-
-
-
-
-
-
-perms(V) when is_integer(V) -> 
-    [list_to_integer(L) || L <- perms(integer_to_list(V)), s(list_to_integer(L)) == s(V)];
-
-perms([]) -> [[]];
-perms(L)  -> [[H|T] || H <- L, T <- perms(L--[H])].
 
 
 nth_root(N, X) -> nth_root(N, X, 1.0e-5).
@@ -79,6 +67,16 @@ fixed_point(_, Guess, Tolerance, Next) when abs(Guess - Next) < Tolerance ->
     Next;
 fixed_point(F, _, Tolerance, Next) ->
     fixed_point(F, Next, Tolerance, F(Next)).
+
+
+printList(N) -> [print(X) || X <- N].
+print(N) -> io:format("~B~n", [N]).
+
+ar(Finish, Finish, Array) -> print(array:size(Array)), arit(Array, 1);
+ar(C, Finish, Array) -> ar(C+1, Finish, array:set(C, false, Array)).
+arit(Array, 41063625) -> ok;
+arit(Array, Counter) -> array:get(Counter, Array), arit(Array, Counter+1).
+
 
 
 

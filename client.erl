@@ -1,60 +1,68 @@
 -module(client).
 -export([permutations/1, nth_root/2, floor/1, 
-    no_decimal_places/1, task/4, print/1, printList/1, number_size/1, ar/3, arit/2, start_task/4,
-    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1,test_answers_found/0, go/0, answer_found/2, results_listener/2]).
+    no_decimal_places/1, task/4, print/1, printList/1, number_size/1, start_process/4, task_await_start/4,
+    start_perm_cube_processes/6, remove_duplicates/1,cubes_from_permutations/1, run/0, answer_found/2, results_listener/2]).
 -import(io, [format/1, format/2]).
 -import(lists, [seq/2]).
 
 
+ run() ->
+    %TODO ADD STDIO
+    ResultsListenerPid = spawn(?MODULE, results_listener, [array:new(), 0]),
+    % Create proceses and then start them all
+    [Pid ! start || Pid <- start_perm_cube_processes(41063625,100000,1,42063625,ResultsListenerPid,[])].
 
 
 
-%41063625
-% 41063621 410636256
-% {100025,[{512,8.0},{125000,50.0},{512000,80.0}]}
+start_perm_cube_processes(Counter, Amount, Id, Limit, ParentPid, TaskPids) when Counter >= Limit -> TaskPids;
+start_perm_cube_processes(Counter, Amount, Id, Limit, ParentPid, TaskPids) 
+    -> start_perm_cube_processes(Counter+Amount, Amount, Id+1, Limit, ParentPid, 
+        [start_process(Counter, Counter+Amount, Id, ParentPid)|TaskPids]).
 
-%client:cubes_from_permutations(41063625).
-cubes_from_permutations(Number) -> 
-    [{PermNum, nth_root(3,PermNum)} || PermNum <- permutations(Number), no_decimal_places(nth_root(3,PermNum))].
+start_process(Start, Finish, Id, ParentPid) -> spawn(?MODULE, task_await_start, [Start, Finish, Id, ParentPid]).
 
-permutations(Number) when is_integer(Number) -> 
-    NumberSize = number_size(Number),
-    [list_to_integer(Perm) || Perm <- remove_dups(permutations(integer_to_list(Number))), number_size(list_to_integer(Perm)) == NumberSize];
+task_await_start(Counter, End, Id, ParentPid) -> 
+    receive
+        start -> task(Counter, End, Id, ParentPid)
+    end.
 
-permutations([]) -> [[]];
-permutations(L)  -> [[H|T] || H <- L, T <- permutations(L--[H])].
-
-%noanswer_print(Id),
-task(End, End, Id, ParentPid) -> noanswer_print(Id), ParentPid ! {Id, false};  
+task(End, End, Id, ParentPid) -> ParentPid ! {Id, false}; %Solution not found  
 task(Counter, End, Id, ParentPid) ->
-    %Cubes = cubes_from_permutations(Counter),   %% TRY MAKING TAIL RECURSIVE
-    Switch = no_decimal_places(nth_root(3,Counter)),
-    case Switch of
-        false -> task(Counter + 1, End, Id, ParentPid);
+    case has_nth_root(3,Counter) of
+        % Counter doesn't have nth root, skip
+        false -> task(Counter+1, End, Id, ParentPid);
         true ->
-            case length(cubes_from_permutations(Counter)) == 5 of 
+            % To make this tail recursive we may need to compute this twice.
+            % However this is not expected to happen often.  
+            case length(cubes_from_permutations(Counter)) == 3 of 
                 true -> ParentPid ! {Id, true, Counter, cubes_from_permutations(Counter)};
                 false -> task(Counter + 1, End, Id, ParentPid)
         end        
     end.
 
-%client:start_task(41063625, 41063626, 1, self())
-start_task(Start, Finish, Id, ParentPid) -> spawn(?MODULE, task, [Start, Finish, Id, ParentPid]).
+cubes_from_permutations(Num) -> 
+    [{PermNum, nth_root(3,PermNum)} || PermNum <- permutations(Num), has_nth_root(3,PermNum)].
 
-%Shell got {411,true,41063625,
-%           [{56623104,384.0},{41063625,345.0},{66430125,405.0}]}
+permutations(Num) when is_integer(Num) ->
+    % Build permutations and remove duplicates to reduce processing 
+    PermList = remove_duplicates(permutations(integer_to_list(Num))),
+    % Some permutations have less digits than Num when the number starts with 0. Filter these out.
+    NumSize = number_size(Num),
+    [list_to_integer(Perm) || Perm <- PermList, length(Perm) == NumSize];
+
+permutations([]) -> [[]];
+permutations(L)  -> [[H|T] || H <- L, T <- permutations(L--[H])].
 
 
-%41063625 -> client:start_multiple_task(1,500000,1,50000000,self(),[]).
-%client:start_multiple_task(41063603,10,1,41063626,self(),[]).
-start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) when Counter >= Limit -> start_task_println(Id), TaskPids;
-start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) 
-    -> start_task_println(Id), start_multiple_task(Counter+Amount, Amount, Id+1, Limit, ParentPid, 
-        [start_task(Counter, Counter+Amount, Id, ParentPid)|TaskPids]).
-
-
+% Each cube permutation process launched has an Id associated with it.
+% When the task completes a message is sent to the results_listener process.
+% The results of the task are added to index Id in ResultsArray 
+%   e.g. ResultsArray[1] = {Id, false} OR ResultsArray[455] = {Id, true, Counter, Cubes} 
+%
+% When an answer is found e.g. Id 445, the previous entries will be checked to see if they have been resolved (see answer_found).
+% If so and none of them contained an answer then the answer produced by Id 445 will be the one selected.  
 results_listener(ResultsArray, Count) ->
-    io:format("results_listener ~B~n", [Count]),
+    io:format("Received ~B results so far ~n", [Count]),
     case answer_found(1, ResultsArray) of
         {true, Id, Counter, Results} -> answer_print(Counter,Results), exit(found);
         {false} -> 
@@ -64,22 +72,9 @@ results_listener(ResultsArray, Count) ->
             end    
     end.
 
-
- go() ->
-    RListenerPid = spawn(?MODULE, results_listener, [array:new(), 0]),
-    %1000000000
-    start_multiple_task(1,500000,1,1000000000,RListenerPid,[]).
-    
-
-
-test_answers_found() ->
-    Array = array:new(10),
-    Array2 = array:set(1, {99, false}, Array),
-    Array3 = array:set(2, {99, false}, Array2),
-    Array4 = array:set(2, {66, true, 66, results}, Array3),
-    answer_found(1, Array4).
-
-
+% Used to see if there is an answer. 
+% Continues whilst results have been reported for number ranges (e.g. 1-10000, 10001-20000).
+% If an array entry is undefined then the function returns false.
 answer_found(Index, ResultsArray) ->
     case array:get(Index, ResultsArray) of 
         undefined -> {false};
@@ -91,9 +86,12 @@ answer_found(Index, ResultsArray) ->
 
 
 %utils
+digits_count(Num) when is_integer(Num) -> length(integer_to_list(Num)).
+
+has_nth_root(N, Value) -> no_decimal_places(nth_root(N,Value)).
 number_size(I) when is_integer(I) -> length(integer_to_list(I)). 
 no_decimal_places(N) -> N == floor(N).
-remove_dups(L) -> sets:to_list(sets:from_list(L)).
+remove_duplicates(L) -> sets:to_list(sets:from_list(L)).
 
 floor(X) when X < 0 ->
     T = trunc(X),
@@ -122,17 +120,12 @@ fixed_point(F, _, Tolerance, Next) ->
 printList(N) -> [print(X) || X <- N].
 print(N) -> io:format("~B~n", [N]).
 
-here() -> io:format("Here~n").
 
-start_task_println(N) -> io:format("Starting task ~B~n", [N]).
+start_process_println(N) -> io:format("Starting task ~B~n", [N]).
 answer_print(N, Cubes) -> io:format("Answer is ~B~n", [N]), [io:format("Number ~B Root ~B ~n", [N,floor(R)]) || {N,R} <- Cubes].
 winner_print(N) -> io:format("We have a winner Id ~B Number ~B ~n", N).
 noanswer_print(N) -> io:format("No answer ~B~n", [N]).
 
-ar(Finish, Finish, Array) -> print(array:size(Array)), arit(Array, 1);
-ar(C, Finish, Array) -> ar(C+1, Finish, array:set(C, false, Array)).
-arit(Array, 41063625) -> ok;
-arit(Array, Counter) -> array:get(Counter, Array), arit(Array, Counter+1).
 
 
 

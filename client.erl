@@ -22,17 +22,27 @@ permutations([]) -> [[]];
 permutations(L)  -> [[H|T] || H <- L, T <- permutations(L--[H])].
 
 
-task(End, End, Id, ParentPid) -> print(Id), ParentPid ! {Id, false};   
+task(End, End, Id, ParentPid) -> print(Id), ParentPid ! {Id, false};  
 task(Counter, End, Id, ParentPid) ->
-    Cubes = cubes_from_permutations(Counter),
-    case length(Cubes) == 3 of 
-        true -> print(Id), ParentPid ! {Id, true, Counter, Cubes};
-        false -> task(Counter + 1, End, Id, ParentPid)
+    %Cubes = cubes_from_permutations(Counter),   %% TRY MAKING TAIL RECURSIVE
+    Switch = no_decimal_places(nth_root(3,Counter)),
+    case Switch of
+        false -> task(Counter + 1, End, Id, ParentPid);
+        true ->
+            case length(cubes_from_permutations(Counter)) == 5 of 
+                true -> print(Id), ParentPid ! {Id, true, Counter, cubes_from_permutations(Counter)};
+                false -> task(Counter + 1, End, Id, ParentPid)
+        end        
     end.
 
 %client:start_task(41063625, 41063626, 1, self())
 start_task(Start, Finish, Id, ParentPid) -> spawn(?MODULE, task, [Start, Finish, Id, ParentPid]).
 
+%Shell got {411,true,41063625,
+%           [{56623104,384.0},{41063625,345.0},{66430125,405.0}]}
+
+%client:start_multiple_task(1,100,1,41063626,self(),[]).
+%LONGER -> client:start_multiple_task(41062603,10,1,41063626,self(),[]).
 %client:start_multiple_task(41063603,10,1,41063626,self(),[]).
 start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) when Counter >= Limit -> print(Id), TaskPids;
 start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) 

@@ -1,9 +1,12 @@
 -module(client).
 -export([permutations/1, nth_root/2, floor/1, 
     no_decimal_places/1, task/4, print/1, printList/1, number_size/1, ar/3, arit/2, start_task/4,
-    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1]).
+    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1,test_answers_found/0]).
 -import(io, [format/1, format/2]).
 -import(lists, [seq/2]).
+
+
+
 
 
 %41063625
@@ -29,7 +32,7 @@ task(Counter, End, Id, ParentPid) ->
     case Switch of
         false -> task(Counter + 1, End, Id, ParentPid);
         true ->
-            case length(cubes_from_permutations(Counter)) == 5 of 
+            case length(cubes_from_permutations(Counter)) == 3 of 
                 true -> print(Id), ParentPid ! {Id, true, Counter, cubes_from_permutations(Counter)};
                 false -> task(Counter + 1, End, Id, ParentPid)
         end        
@@ -41,13 +44,35 @@ start_task(Start, Finish, Id, ParentPid) -> spawn(?MODULE, task, [Start, Finish,
 %Shell got {411,true,41063625,
 %           [{56623104,384.0},{41063625,345.0},{66430125,405.0}]}
 
-%client:start_multiple_task(1,100,1,41063626,self(),[]).
-%LONGER -> client:start_multiple_task(41062603,10,1,41063626,self(),[]).
+
+%41063625 -> client:start_multiple_task(1,500000,1,50000000,self(),[]).
 %client:start_multiple_task(41063603,10,1,41063626,self(),[]).
 start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) when Counter >= Limit -> print(Id), TaskPids;
 start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) 
     -> print(Id), start_multiple_task(Counter+Amount, Amount, Id+1, Limit, ParentPid, 
         [start_task(Counter, Counter+Amount, Id, ParentPid)|TaskPids]).
+
+
+results_listener(ResultsArray) when answer_found(1, ResultsArray) == true -> 1.
+    
+
+
+test_answers_found() ->
+    Array = array:new(10),
+    Array2 = array:set(1, {99, false}, Array),
+    Array3 = array:set(2, {99, false}, Array2),
+    Array4 = array:set(2, {66, true, 66, results}, Array3),
+    answer_found(1, Array4).
+
+
+answer_found(Index, ResultsArray) ->
+    case array:get(Index, ResultsArray) of 
+        undefined -> {false};
+        {_, false} -> answer_found(Index+1, ResultsArray);
+        {Id, true, Counter, Results} -> {true, Counter, Results}
+    end.
+
+
 
 
 %utils

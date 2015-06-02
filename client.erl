@@ -1,7 +1,7 @@
 -module(client).
 -export([permutations/1, nth_root/2, floor/1, 
     no_decimal_places/1, task/4, print/1, printList/1, number_size/1, ar/3, arit/2, start_task/4,
-    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1,test_answers_found/0]).
+    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1,test_answers_found/0, go/0, answer_found/2, results_listener/1]).
 -import(io, [format/1, format/2]).
 -import(lists, [seq/2]).
 
@@ -15,7 +15,7 @@
 
 %client:cubes_from_permutations(41063625).
 cubes_from_permutations(Number) -> 
-    [{PermNum,  nth_root(3,PermNum)} || PermNum <- permutations(Number), no_decimal_places(nth_root(3,PermNum))].
+    [{PermNum, nth_root(3,PermNum)} || PermNum <- permutations(Number), no_decimal_places(nth_root(3,PermNum))].
 
 permutations(Number) when is_integer(Number) -> 
     NumberSize = number_size(Number),
@@ -25,7 +25,7 @@ permutations([]) -> [[]];
 permutations(L)  -> [[H|T] || H <- L, T <- permutations(L--[H])].
 
 
-task(End, End, Id, ParentPid) -> print(Id), ParentPid ! {Id, false};  
+task(End, End, Id, ParentPid) -> ParentPid ! {Id, false};  
 task(Counter, End, Id, ParentPid) ->
     %Cubes = cubes_from_permutations(Counter),   %% TRY MAKING TAIL RECURSIVE
     Switch = no_decimal_places(nth_root(3,Counter)),
@@ -33,7 +33,7 @@ task(Counter, End, Id, ParentPid) ->
         false -> task(Counter + 1, End, Id, ParentPid);
         true ->
             case length(cubes_from_permutations(Counter)) == 3 of 
-                true -> print(Id), ParentPid ! {Id, true, Counter, cubes_from_permutations(Counter)};
+                true -> ParentPid ! {Id, true, Counter, cubes_from_permutations(Counter)};
                 false -> task(Counter + 1, End, Id, ParentPid)
         end        
     end.
@@ -47,13 +47,26 @@ start_task(Start, Finish, Id, ParentPid) -> spawn(?MODULE, task, [Start, Finish,
 
 %41063625 -> client:start_multiple_task(1,500000,1,50000000,self(),[]).
 %client:start_multiple_task(41063603,10,1,41063626,self(),[]).
-start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) when Counter >= Limit -> print(Id), TaskPids;
+start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) when Counter >= Limit -> start_task_println(Id), TaskPids;
 start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids) 
-    -> print(Id), start_multiple_task(Counter+Amount, Amount, Id+1, Limit, ParentPid, 
+    -> start_task_println(Id), start_multiple_task(Counter+Amount, Amount, Id+1, Limit, ParentPid, 
         [start_task(Counter, Counter+Amount, Id, ParentPid)|TaskPids]).
 
 
-results_listener(ResultsArray) when answer_found(1, ResultsArray) == true -> 1.
+results_listener(ResultsArray) ->
+    case answer_found(1, ResultsArray) of
+        {true, Id, Counter, Results} -> answer_print(Counter,Results), exit(found);
+        {false} -> 
+            receive 
+               {Id, false} -> results_listener(array:set(Id, {false}, ResultsArray));
+               {Id, true, Counter, Cubes} -> results_listener(array:set(Id, {Id, true, Counter, Cubes}, ResultsArray))
+            end    
+    end.
+
+
+ go() ->
+    RListenerPid = spawn(?MODULE, results_listener, [array:new()]),
+    start_multiple_task(40000000,500000,1,42000000,RListenerPid,[]).
     
 
 
@@ -68,8 +81,8 @@ test_answers_found() ->
 answer_found(Index, ResultsArray) ->
     case array:get(Index, ResultsArray) of 
         undefined -> {false};
-        {_, false} -> answer_found(Index+1, ResultsArray);
-        {Id, true, Counter, Results} -> {true, Counter, Results}
+        {false} -> answer_found(Index+1, ResultsArray);
+        {Id, true, Counter, Results} -> {true, Id, Counter, Results}
     end.
 
 
@@ -106,6 +119,13 @@ fixed_point(F, _, Tolerance, Next) ->
 
 printList(N) -> [print(X) || X <- N].
 print(N) -> io:format("~B~n", [N]).
+
+here() -> io:format("Here~n").
+
+start_task_println(N) -> io:format("Starting task ~B~n", [N]).
+answer_print(N, Cubes) -> io:format("Answer is ~B~n", [N]), [io:format("Number ~B Root ~B ~n", [N,floor(R)]) || {N,R} <- Cubes].
+winner_print(N) -> io:format("We have a winner Id ~B Number ~B ~n", N).
+noanswer_print(N) -> io:format("No answer ~B~n", [N]).
 
 ar(Finish, Finish, Array) -> print(array:size(Array)), arit(Array, 1);
 ar(C, Finish, Array) -> ar(C+1, Finish, array:set(C, false, Array)).

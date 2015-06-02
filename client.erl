@@ -1,7 +1,7 @@
 -module(client).
 -export([permutations/1, nth_root/2, floor/1, 
     no_decimal_places/1, task/4, print/1, printList/1, number_size/1, ar/3, arit/2, start_task/4,
-    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1,test_answers_found/0, go/0, answer_found/2, results_listener/1]).
+    start_multiple_task/6, remove_dups/1,cubes_from_permutations/1,test_answers_found/0, go/0, answer_found/2, results_listener/2]).
 -import(io, [format/1, format/2]).
 -import(lists, [seq/2]).
 
@@ -24,15 +24,15 @@ permutations(Number) when is_integer(Number) ->
 permutations([]) -> [[]];
 permutations(L)  -> [[H|T] || H <- L, T <- permutations(L--[H])].
 
-
-task(End, End, Id, ParentPid) -> ParentPid ! {Id, false};  
+%noanswer_print(Id),
+task(End, End, Id, ParentPid) -> noanswer_print(Id), ParentPid ! {Id, false};  
 task(Counter, End, Id, ParentPid) ->
     %Cubes = cubes_from_permutations(Counter),   %% TRY MAKING TAIL RECURSIVE
     Switch = no_decimal_places(nth_root(3,Counter)),
     case Switch of
         false -> task(Counter + 1, End, Id, ParentPid);
         true ->
-            case length(cubes_from_permutations(Counter)) == 3 of 
+            case length(cubes_from_permutations(Counter)) == 5 of 
                 true -> ParentPid ! {Id, true, Counter, cubes_from_permutations(Counter)};
                 false -> task(Counter + 1, End, Id, ParentPid)
         end        
@@ -53,20 +53,22 @@ start_multiple_task(Counter, Amount, Id, Limit, ParentPid, TaskPids)
         [start_task(Counter, Counter+Amount, Id, ParentPid)|TaskPids]).
 
 
-results_listener(ResultsArray) ->
+results_listener(ResultsArray, Count) ->
+    io:format("results_listener ~B~n", [Count]),
     case answer_found(1, ResultsArray) of
         {true, Id, Counter, Results} -> answer_print(Counter,Results), exit(found);
         {false} -> 
             receive 
-               {Id, false} -> results_listener(array:set(Id, {false}, ResultsArray));
-               {Id, true, Counter, Cubes} -> results_listener(array:set(Id, {Id, true, Counter, Cubes}, ResultsArray))
+               {Id, false} -> results_listener(array:set(Id, {false}, ResultsArray), Count+1);
+               {Id, true, Counter, Cubes} -> results_listener(array:set(Id, {Id, true, Counter, Cubes}, ResultsArray), Count+1)
             end    
     end.
 
 
  go() ->
-    RListenerPid = spawn(?MODULE, results_listener, [array:new()]),
-    start_multiple_task(40000000,500000,1,42000000,RListenerPid,[]).
+    RListenerPid = spawn(?MODULE, results_listener, [array:new(), 0]),
+    %1000000000
+    start_multiple_task(1,500000,1,1000000000,RListenerPid,[]).
     
 
 
